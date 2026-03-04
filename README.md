@@ -1,18 +1,18 @@
 # TurboFind
 
-Fast file indexer and search for Windows. Indexes 780K+ files in ~12s, then fuzzy-searches them in ~10ms.
+Fast file indexer and search for Windows. Indexes 1M+ files in ~12s, then fuzzy-searches them in ~15ms.
 
 Built with Rust using rayon for parallel crawling, nucleo for fuzzy matching (same engine as Helix editor), and crossterm for the TUI.
 
 ## Benchmarks
 
-Tested on 786,882 files (RTX 3060 / Ryzen system):
+Tested on 1,093,594 files (RTX 3060 / Ryzen system):
 
 | Operation | Time |
 |---|---|
 | First index | ~12s (65K files/sec) |
 | Cache reload | <1s |
-| Fuzzy search (avg) | ~10ms |
+| Fuzzy search (avg) | ~15ms (1.09M files) |
 
 Measured over 100 iterations per query using release build. Run `Ctrl+B` inside the TUI to benchmark on your machine.
 
