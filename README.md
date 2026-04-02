@@ -35,7 +35,7 @@ cargo install --path .
 
 This copies `turbofind` to `~/.cargo/bin/` which is already in your PATH. Run `turbofind` from anywhere.
 
-Or grab the pre-built `.exe` from [Releases](https://github.com/fulong97/turbofind/releases).
+Or grab the pre-built `.exe` from [Releases](https://github.com/ahsodex/turbofind/releases).
 
 ## Usage
 
