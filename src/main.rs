@@ -632,14 +632,12 @@ impl FileIndex {
                         line.to_lowercase().contains(&search_lower)
                     };
                     if matched {
+                        let safe_line = sanitize_terminal_text(line.trim());
                         file_hits.push(SearchHit {
                             entry,
                             score: 0,
                             line_num: line_idx + 1,
-                            line_text: line.trim().chars()
-                                .filter(|c| !c.is_control())
-                                .take(200)
-                                .collect(),
+                            line_text: safe_line.chars().take(200).collect(),
                         });
                         if file_hits.len() >= per_file_limit {
                             break;
@@ -669,6 +667,44 @@ fn fit(s: &str, w: usize) -> String {
     } else {
         format!("{:<width$}", s, width = w)
     }
+}
+
+/// Remove terminal-control and hard line-separator chars from untrusted text.
+/// Keeps display text inert so file contents cannot emit terminal escape sequences.
+fn sanitize_terminal_text(s: &str) -> String {
+    s.chars().filter(|&c| is_safe_terminal_char(c)).collect()
+}
+
+/// True if a character is safe to pass through to terminal output.
+fn is_safe_terminal_char(c: char) -> bool {
+    if c.is_control() {
+        return false;
+    }
+
+    // Remove hard line separators.
+    if matches!(c, '\u{2028}' | '\u{2029}') {
+        return false;
+    }
+
+    // Remove invisible formatting and bidi controls that can spoof/reorder text.
+    if matches!(
+        c,
+        '\u{200B}'..='\u{200F}' // ZW* + direction marks
+            | '\u{202A}'..='\u{202E}' // bidi embedding/override
+            | '\u{2060}'..='\u{2064}' // word joiner/invisible ops
+            | '\u{2066}'..='\u{2069}' // bidi isolate controls
+            | '\u{FEFF}' // BOM / zero-width no-break space
+    ) {
+        return false;
+    }
+
+    // Remove Unicode noncharacters.
+    let u = c as u32;
+    if (0xFDD0..=0xFDEF).contains(&u) || (u & 0xFFFE == 0xFFFE) {
+        return false;
+    }
+
+    true
 }
 
 /// Count visible characters, excluding ANSI escape sequences
@@ -944,13 +980,13 @@ fn run_tui(index: &mut FileIndex, cache_path: &Path, roots: &[&str]) -> io::Resu
             } else if !sel_path.is_empty() && is_document_extension(sel_ext) {
                 preview_lines = extract_document_text(sel_path, sel_ext)
                     .filter(|c| c.len() <= 1_048_576)
-                    .map(|c| c.lines().map(|l| l.to_string()).collect())
+                    .map(|c| c.lines().map(sanitize_terminal_text).collect())
                     .unwrap_or_else(|| vec!["(cannot extract text)".to_string()]);
             } else if !sel_path.is_empty() && !is_binary_extension(sel_ext) {
                 preview_lines = fs::read_to_string(sel_path)
                     .ok()
                     .filter(|c| c.len() <= 1_048_576)
-                    .map(|c| c.lines().map(|l| l.to_string()).collect())
+                    .map(|c| c.lines().map(sanitize_terminal_text).collect())
                     .unwrap_or_else(|| vec!["(cannot read file)".to_string()]);
             } else if !sel_path.is_empty() {
                 preview_lines = vec!["(binary file)".to_string()];
@@ -1158,9 +1194,32 @@ fn run_tui(index: &mut FileIndex, cache_path: &Path, roots: &[&str]) -> io::Resu
                     let is_match_line = preview_highlight > 0 && ln == preview_highlight;
 
                     let preview_line = if is_match_line {
-                        // highlighted match line: bold yellow line number, yellow background
-                        let highlighted = highlight_term(content, &search_term);
-                        format!("\x1b[1;33m{:>4}\x1b[0m \x1b[43;30m{}\x1b[0m", ln, highlighted)
+                        // highlighted match line: bold yellow line number; matched term in bold+underline+bright-yellow
+                        let tl = content.to_lowercase();
+                        let terml = search_term.to_lowercase();
+                        let line_content = if !terml.is_empty() {
+                            if let Some(pos) = tl.find(&terml) {
+                                let end = pos + terml.len();
+                                if end <= content.len()
+                                    && content.is_char_boundary(pos)
+                                    && content.is_char_boundary(end)
+                                {
+                                    format!(
+                                        "{}\x1b[1;4;93m{}\x1b[0m{}",
+                                        &content[..pos],
+                                        &content[pos..end],
+                                        &content[end..]
+                                    )
+                                } else {
+                                    content.to_string()
+                                }
+                            } else {
+                                content.to_string()
+                            }
+                        } else {
+                            content.to_string()
+                        };
+                        format!("\x1b[1;33m{:>4}\x1b[0m {}", ln, line_content)
                     } else {
                         // context lines: bright near match, dimmed far
                         let dist = if preview_highlight > 0 {
@@ -2397,6 +2456,43 @@ mod tests {
         assert_eq!(results.len(), 1);
         // verify no control chars in line_text
         assert!(!results[0].line_text.chars().any(|c| c.is_control()));
+    }
+
+    #[test]
+    fn test_sanitize_terminal_text_removes_line_separators() {
+        let s = "ok\u{2028}next\u{2029}last\x1b[31m";
+        let out = sanitize_terminal_text(s);
+        assert_eq!(out, "oknextlast[31m");
+        assert!(!out.chars().any(|c| c.is_control()));
+    }
+
+    #[test]
+    fn test_sanitize_terminal_text_removes_bidi_and_zero_width() {
+        let s = "ab\u{202E}cd\u{200B}ef\u{2066}gh\u{2069}";
+        let out = sanitize_terminal_text(s);
+        assert_eq!(out, "abcdefgh");
+    }
+
+    #[test]
+    fn test_sanitize_terminal_text_preserves_non_english() {
+        let s = "cafe\u{0301} 你好 Привет العربية";
+        let out = sanitize_terminal_text(s);
+        assert_eq!(out, s);
+    }
+
+    #[test]
+    fn test_content_search_strips_unicode_line_separators() {
+        let dir = TempDir::new().unwrap();
+        fs::write(dir.path().join("u2028.txt"), "prefix\u{2028}needle").unwrap();
+
+        let root = dir.path().to_string_lossy().to_string();
+        let index = FileIndex::build(&[root.as_str()]);
+        let cancel = AtomicBool::new(false);
+        let results = index.search("grep:needle", 100, &cancel);
+
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].line_text.contains('\u{2028}'));
+        assert!(results[0].line_text.contains("needle"));
     }
 
     #[test]
