@@ -101,6 +101,8 @@ The commands above are startup options only. Once TurboFind is running, you can 
 | `ext:pdf invoice` | Only .pdf filenames matching "invoice" |
 | `in:report.docx grep:budget` | Search contents of a specific document |
 
+> **Supported content types:** `grep:` / `content:` search plain-text files by default. Document extraction is supported for `pdf`, `docx`, `xlsx`, `pptx`, `odt`, `ods`, `odp`, and `rtf` only when targeted with `ext:` or `in:` scope.
+
 > **Filter syntax:** Most filters carry their value directly after the colon (`ext:rs`, `grep:TODO`, `regex:\.test\.`). `dir:` and standalone `regex:` are mode flags — they take no value and change how the rest of the query is interpreted. For filename regex, use `regex:<pattern>` (or `regex:` followed by pattern terms). With `grep:` / `content:`, bare `regex:` enables regex content search.
 
 ### Keys
