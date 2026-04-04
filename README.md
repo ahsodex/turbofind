@@ -30,10 +30,13 @@ Binary ends up at `target/release/turbofind.exe`.
 ## Install
 
 ```bash
-cargo install --path .
+cargo build --release
+copy target\release\turbofind.exe %USERPROFILE%\.cargo\bin\
 ```
 
-This copies `turbofind` to `~/.cargo/bin/` which is already in your PATH. Run `turbofind` from anywhere.
+This copies the already-built binary to `~/.cargo/bin/` which is already in your PATH. Run `turbofind` from anywhere.
+
+> **Note:** `cargo install --path .` also works but recompiles everything from scratch, ignoring your existing `target/release/` artifacts.
 
 Or grab the pre-built `.exe` from [Releases](https://github.com/ahsodex/turbofind/releases).
 
