@@ -19,7 +19,7 @@ Measured over 100 iterations per query using release build. Run `Ctrl+B` inside 
 ## Build
 
 ```bash
-git clone https://github.com/fulong97/turbofind.git
+git clone https://github.com/ahsodex/turbofind.git
 cd turbofind
 cargo build --release
 cargo test
@@ -53,49 +53,66 @@ turbofind --reindex
 # Run without reading or writing cache
 turbofind --no-cache
 
+# Show CLI help
+turbofind --help
+
 # Combine flags with custom roots
 turbofind --reindex C:\Projects
 ```
+
+### CLI flags
+
+| Flag | What it does |
+|---|---|
+| `--help`, `-h` | Show usage and exit |
+| `--reindex` | Force rebuild index (ignore cache) |
+| `--no-cache` | Skip reading and writing cache |
+| `[DIRECTORIES...]` | Index specific roots (default: current directory) |
+
+The commands above are startup options only. Once TurboFind is running, you can use interactive query filters and keyboard controls in the TUI:
 
 ### Search filters
 
 | Query | What it does |
 |---|---|
-| `budget` | Fuzzy match all files |
+| `budget` | Fuzzy match all filenames |
 | `dir:` | Only directories |
-| `ext:rs config` | Only .rs files matching "config" |
-| `in:Projects config` | Files under paths containing "Projects" |
+| `ext:rs config` | Only .rs filenames matching "config" |
+| `in:Projects config` | Fuzzy match filenames under paths containing "Projects" |
 | `in:C:\Downloads` | Prefix match on full path |
 | `in:src\utils ext:rs` | .rs files under paths with "src\utils" |
 | `regex:\.test\.` | Regex match filenames |
-| `regex: ext:rs ^lib` | Regex match .rs filenames starting with "lib" |
+| `ext:rs regex:^lib` | Regex match .rs filenames starting with "lib" |
 | `grep:TODO` | Search file contents for "TODO" |
-| `grep:TODO regex:` | Regex search file contents |
+| `grep:fn\s+\w+ regex:` | Regex search file contents |
 | `content:fixme ext:py` | Search .py file contents for "fixme" |
-| `content:fn\s+main ext:rs` | Regex content search with `regex:` flag |
-| `ext:pdf invoice` | Search PDFs for "invoice" |
-| `in:report.docx grep:budget` | Search specific document |
+| `content:fn\s+main ext:rs regex:` | Regex search .rs file contents |
+| `ext:pdf invoice` | Only .pdf filenames matching "invoice" |
+| `in:report.docx grep:budget` | Search contents of a specific document |
+
+> **Filter syntax:** Most filters carry their value directly after the colon (`ext:rs`, `grep:TODO`, `regex:\.test\.`). `dir:` and standalone `regex:` are mode flags — they take no value and just change how the rest of the query is interpreted. `regex:` is the only filter that works both ways: `regex:pattern` matches filenames by regex, while bare `regex:` enables regex mode for a `grep:` or `content:` search.
 
 ### Keys
 
 | Key | Action |
 |---|---|
-| `Up/Down` | Navigate results |
-| `PgUp/PgDown` | Scroll by page |
-| `Home/End` | Jump to first/last result |
-| `Tab` | Complete `in:` with selected path (file or dir) |
-| `Ctrl+Left/Right` | Jump cursor by word |
-| `Ctrl+Home/End` | Jump cursor to start/end |
-| `Ctrl+U` | Clear search line |
-| `Ctrl+K` | Delete to end of line |
-| `Ctrl+Backspace` | Delete word before cursor |
-| `Ctrl+Delete` | Delete word after cursor |
-| `Enter` | Show file in folder |
-| `Ctrl+O` | Open file directly |
+| `Up/Down` | In results: move selection up/down |
+| `PgUp/PgDown` | In results: scroll by page |
+| `Home/End` | In results: jump to first/last result |
+| `Tab` | Fill the `in:` filter in the search line with the selected result |
+| `Ctrl+Left/Right` | In search line: jump cursor by word |
+| `Ctrl+Home/End` | In search line: jump cursor to start/end |
+| `Ctrl+U` | In search line: clear entire input |
+| `Ctrl+K` | In search line: delete to end of input |
+| `Ctrl+Backspace` | In search line: delete word before cursor |
+| `Ctrl+Delete` | In search line: delete word after cursor |
+| `Enter` | Show selected result in file manager (Windows: `explorer /select,`) |
+| `Ctrl+O` | Open selected file with default application |
 | `Ctrl+R` | Rebuild index |
+| `Ctrl+N` | Add new path to index |
 | `Ctrl+B` | Run benchmark |
 | `F1` | Toggle help screen |
-| `Esc` | Quit |
+| `Esc / Ctrl+C` | Quit |
 
 > **Tip:** Type `in:downloads` to see matching paths, navigate to the one you want, press `Tab` to lock in that exact path, then continue typing your search. Works for both files and directories — e.g. Tab onto a `.docx` file, then add `grep:term` to search its contents.
 
@@ -112,6 +129,13 @@ First run crawls the filesystem in parallel using all CPU cores and builds an in
 ## Dependencies
 
 `rayon` `walkdir` `nucleo` `regex` `crossterm` `postcard` `serde` `dirs` `zip` `pdf-extract`
+
+Dev dependency: `tempfile` (tests)
+
+## Origin
+
+This repository is an adapted fork of [fulong97/turbofind](https://github.com/fulong97/turbofind).
+This fork adds ongoing feature and UX updates while preserving upstream attribution under the MIT license.
 
 ## License
 

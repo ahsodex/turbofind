@@ -2,7 +2,7 @@
 
 ## Architecture
 
-Single-binary Rust TUI application. All code lives in `src/main.rs` (~2675 lines).
+Single-binary Rust TUI application. All code lives in `src/main.rs` (~2.5k lines).
 
 ### Core Data Structures
 
@@ -13,7 +13,7 @@ Single-binary Rust TUI application. All code lives in `src/main.rs` (~2675 lines
 ### Three-Phase Design
 
 1. **Indexing** — Parallel filesystem crawl via rayon + walkdir. Skips hidden (`.`) and system (`$`) entries. `follow_links(false)` to prevent symlink loops.
-2. **Caching** — Postcard serialization to `~/.cache/turbofind/index.bin`. 1-hour TTL. Auto-invalidated when roots change.
+2. **Caching** — Postcard serialization to `<cache_dir>/turbofind/index.bin` using `dirs::cache_dir()` (on Windows: `%LOCALAPPDATA%\turbofind\index.bin`). 1-hour TTL. Cache is auto-invalidated when roots change.
 3. **Search** — Dispatched by filter type:
    - Default: nucleo fuzzy matching with parallel scoring (rayon `map_init`), exact substring boost (+10000)
    - `regex:`/`re:` — regex crate, case-insensitive filename matching
@@ -31,7 +31,7 @@ Single-binary Rust TUI application. All code lives in `src/main.rs` (~2675 lines
 - Preview pane (bottom 40% of screen) shows file content centered on match line with context
 - `visible_len()` counts visible chars excluding ANSI escapes for correct width calculations
 
-## Dependencies
+## Runtime Dependencies
 
 | Crate | Purpose |
 |---|---|
@@ -45,6 +45,12 @@ Single-binary Rust TUI application. All code lives in `src/main.rs` (~2675 lines
 | `pdf-extract` | PDF text extraction |
 | `serde` | Serialization framework |
 | `dirs` | Platform cache directory lookup |
+
+## Dev Dependencies
+
+| Crate | Purpose |
+|---|---|
+| `tempfile` | Temporary directories/files in tests |
 
 ## Features
 
@@ -72,26 +78,26 @@ Single-binary Rust TUI application. All code lives in `src/main.rs` (~2675 lines
 
 | Key | Action |
 |---|---|
-| Typing | Fuzzy search (insert at cursor position) |
-| Left/Right | Move cursor in search query |
-| Backspace/Delete | Delete before/at cursor |
-| Up/Down | Navigate results |
-| PgUp/PgDown | Scroll results by page |
-| Home/End | Jump to first/last result |
-| Tab | Complete `in:` with selected path (file or dir) |
-| Ctrl+Left/Right | Jump cursor by word |
-| Ctrl+Home/End | Jump cursor to start/end |
-| Ctrl+U | Clear search line |
-| Ctrl+K | Delete to end of line |
-| Ctrl+Backspace | Delete word before cursor |
-| Ctrl+Delete | Delete word after cursor |
-| Enter | Show file in folder (`explorer /select,` on Windows) |
-| Ctrl+O | Open file directly with default application |
-| Ctrl+R | Rebuild index from scratch |
-| Ctrl+N | Add new path to index (with filesystem Tab completion) |
-| Ctrl+B | Run benchmark (100 iterations × 5 queries) |
-| F1 | Toggle help overlay |
-| Esc / Ctrl+C | Quit |
+| `Typing` | Fuzzy search (insert at cursor position) |
+| `Left/Right` | Move cursor in search query |
+| `Backspace/Delete` | Delete before/at cursor |
+| `Up/Down` | In results: move selection up/down |
+| `PgUp/PgDown` | In results: scroll by page |
+| `Home/End` | In results: jump to first/last result |
+| `Tab` | Fill the `in:` filter in the search line with the selected result |
+| `Ctrl+Left/Right` | In search line: jump cursor by word |
+| `Ctrl+Home/End` | In search line: jump cursor to start/end |
+| `Ctrl+U` | In search line: clear entire input |
+| `Ctrl+K` | In search line: delete to end of input |
+| `Ctrl+Backspace` | In search line: delete word before cursor |
+| `Ctrl+Delete` | In search line: delete word after cursor |
+| `Enter` | Show selected result in file manager (`explorer /select,` on Windows) |
+| `Ctrl+O` | Open selected file with default application |
+| `Ctrl+R` | Rebuild index from scratch |
+| `Ctrl+N` | Add new path to index (with filesystem Tab completion) |
+| `Ctrl+B` | Run benchmark (100 iterations × 5 queries) |
+| `F1` | Toggle help overlay |
+| `Esc / Ctrl+C` | Quit |
 
 ### CLI Flags
 
@@ -142,7 +148,7 @@ cargo build --release
 # Binary: target/release/turbofind.exe
 
 cargo test
-# Runs 47 tests: unit + integration + color/highlight/multi-match/document extraction tests
+# Runs unit/functional tests (search, color/highlight, multi-match, document extraction)
 
 cargo install --path .
 # Installs to ~/.cargo/bin/
