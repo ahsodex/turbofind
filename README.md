@@ -73,24 +73,35 @@ The commands above are startup options only. Once TurboFind is running, you can 
 
 ### Search filters
 
+| Filter | What it does |
+|---|---|
+| `dir:` | Only directories |
+| `ext:<extension>` | Only files with that extension |
+| `in:<path>` | Limit search to paths containing that value (or exact-prefix full path) |
+| `regex:<pattern>` | Regex match filenames |
+| `regex:` | Regex mode flag (filename regex with remaining terms, or regex content search with `grep:` / `content:`) |
+| `grep:<text-or-pattern>` | Search file contents |
+| `content:<text-or-pattern>` | Alias for grep search |
+
+#### Examples
+
 | Query | What it does |
 |---|---|
 | `budget` | Fuzzy match all filenames |
-| `dir:` | Only directories |
 | `ext:rs config` | Only .rs filenames matching "config" |
 | `in:Projects config` | Fuzzy match filenames under paths containing "Projects" |
 | `in:C:\Downloads` | Prefix match on full path |
-| `in:src\utils ext:rs` | .rs files under paths with "src\utils" |
 | `regex:\.test\.` | Regex match filenames |
+| `in:src\utils ext:rs` | .rs files under paths with "src\utils" |
 | `ext:rs regex:^lib` | Regex match .rs filenames starting with "lib" |
 | `grep:TODO` | Search file contents for "TODO" |
-| `grep:fn\s+\w+ regex:` | Regex search file contents |
 | `content:fixme ext:py` | Search .py file contents for "fixme" |
+| `grep:fn\s+\w+ regex:` | Regex search file contents |
 | `content:fn\s+main ext:rs regex:` | Regex search .rs file contents |
 | `ext:pdf invoice` | Only .pdf filenames matching "invoice" |
 | `in:report.docx grep:budget` | Search contents of a specific document |
 
-> **Filter syntax:** Most filters carry their value directly after the colon (`ext:rs`, `grep:TODO`, `regex:\.test\.`). `dir:` and standalone `regex:` are mode flags — they take no value and just change how the rest of the query is interpreted. `regex:` is the only filter that works both ways: `regex:pattern` matches filenames by regex, while bare `regex:` enables regex mode for a `grep:` or `content:` search.
+> **Filter syntax:** Most filters carry their value directly after the colon (`ext:rs`, `grep:TODO`, `regex:\.test\.`). `dir:` and standalone `regex:` are mode flags — they take no value and change how the rest of the query is interpreted. For filename regex, use `regex:<pattern>` (or `regex:` followed by pattern terms). With `grep:` / `content:`, bare `regex:` enables regex content search.
 
 ### Keys
 
