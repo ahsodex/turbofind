@@ -31,7 +31,7 @@ Binary ends up at `target/release/turbofind.exe`.
 
 ```bash
 cargo build --release
-copy target\release\turbofind.exe %USERPROFILE%\.cargo\bin\
+cp target\release\turbofind.exe $HOME\.cargo\bin\
 ```
 
 This copies the already-built binary to `~/.cargo/bin/` which is already in your PATH. Run `turbofind` from anywhere.
