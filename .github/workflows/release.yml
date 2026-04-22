@@ -11,42 +11,46 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Ensure release exists
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release already exists for $GITHUB_REF_NAME"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          fi
 
   build:
     needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: turbofind.exe
-            asset_name: turbofind-windows-x86_64.exe
+            binary_name: turbofind.exe
+            package_dir: turbofind-windows-x86_64
+            archive_name: turbofind-windows-x86_64.zip
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: turbofind
-            asset_name: turbofind-linux-x86_64
-          - os: macos-latest
+            binary_name: turbofind
+            package_dir: turbofind-linux-x86_64
+            archive_name: turbofind-linux-x86_64.tar.gz
+          - os: macos-13
             target: x86_64-apple-darwin
-            artifact_name: turbofind
-            asset_name: turbofind-macos-x86_64
-          - os: macos-latest
+            binary_name: turbofind
+            package_dir: turbofind-macos-x86_64
+            archive_name: turbofind-macos-x86_64.tar.gz
+          - os: macos-14
             target: aarch64-apple-darwin
-            artifact_name: turbofind
-            asset_name: turbofind-macos-aarch64
+            binary_name: turbofind
+            package_dir: turbofind-macos-aarch64
+            archive_name: turbofind-macos-aarch64.tar.gz
 
     steps:
       - uses: actions/checkout@v4
@@ -57,25 +61,34 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --locked --release --target ${{ matrix.target }}
 
-      - name: Prepare artifact (Windows)
+      - name: Package release archive (Windows)
         if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          copy "target\${{ matrix.target }}\release\${{ matrix.artifact_name }}" "${{ matrix.asset_name }}"
+          $packageDir = Join-Path "dist" "${{ matrix.package_dir }}"
+          New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" $packageDir
+          Copy-Item "LICENSE" $packageDir
+          Copy-Item "README.md" $packageDir
+          if (Test-Path "${{ matrix.archive_name }}") {
+            Remove-Item "${{ matrix.archive_name }}"
+          }
+          Compress-Archive -Path "$packageDir/*" -DestinationPath "${{ matrix.archive_name }}"
 
-      - name: Prepare artifact (Unix)
+      - name: Package release archive (Unix)
         if: matrix.os != 'windows-latest'
         run: |
-          cp "target/${{ matrix.target }}/release/${{ matrix.artifact_name }}" "${{ matrix.asset_name }}"
-          chmod +x "${{ matrix.asset_name }}"
+          package_dir="dist/${{ matrix.package_dir }}"
+          mkdir -p "$package_dir"
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$package_dir/"
+          chmod +x "$package_dir/${{ matrix.binary_name }}"
+          cp LICENSE "$package_dir/"
+          cp README.md "$package_dir/"
+          tar -czf "${{ matrix.archive_name }}" -C dist "${{ matrix.package_dir }}"
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Upload release archive
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ matrix.asset_name }}
-          asset_name: ${{ matrix.asset_name }}
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "${{ matrix.archive_name }}" --clobber

@@ -1,6 +1,8 @@
 # TurboFind
 
-Fast file indexer and search for Windows. Indexes 1M+ files in ~12s, then fuzzy-searches them in ~15ms.
+Fast file indexer and search. Indexes 1M+ files in ~12s, then fuzzy-searches them in ~15ms.
+
+**Supported Platforms:** Windows, Linux, macOS
 
 Built with Rust using rayon for parallel crawling, nucleo for fuzzy matching (same engine as Helix editor), and crossterm for the TUI.
 
@@ -25,20 +27,30 @@ cargo build --release
 cargo test
 ```
 
-Binary ends up at `target/release/turbofind.exe`.
+Binary location:
+- **Windows:** `target\release\turbofind.exe`
+- **Linux/macOS:** `target/release/turbofind`
 
 ## Install
 
+**Option 1: Build from source**
 ```bash
 cargo build --release
-cp target\release\turbofind.exe $HOME\.cargo\bin\
 ```
 
-This copies the already-built binary to `~/.cargo/bin/` which is already in your PATH. Run `turbofind` from anywhere.
+Then copy the binary to your PATH:
+- **Windows:** `copy target\release\turbofind.exe %USERPROFILE%\.cargo\bin\`
+- **Linux/macOS:** `cp target/release/turbofind $HOME/.cargo/bin/ && chmod +x $HOME/.cargo/bin/turbofind`
 
 > **Note:** `cargo install --path .` also works but recompiles everything from scratch, ignoring your existing `target/release/` artifacts.
 
-Or grab the pre-built `.exe` from [Releases](https://github.com/ahsodex/turbofind/releases).
+**Option 2: Download pre-built binary**
+
+Download the release for your platform from [Releases](https://github.com/ahsodex/turbofind/releases):
+- **Windows:** `turbofind-windows-x86_64.zip` — extract and run `turbofind.exe`
+- **Linux:** `turbofind-linux-x86_64.tar.gz` — extract with `tar xzf` and run `turbofind`
+- **macOS Intel:** `turbofind-macos-x86_64.tar.gz` — extract with `tar xzf` and run `turbofind`
+- **macOS Apple Silicon:** `turbofind-macos-aarch64.tar.gz` — extract with `tar xzf` and run `turbofind`
 
 ## Usage
 
