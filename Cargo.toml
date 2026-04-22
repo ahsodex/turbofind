@@ -3,6 +3,7 @@ name = "turbofind"
 version = "2.0.1"
 edition = "2024"
 description = "Blazing fast file indexer and search for Windows"
+license = "MIT"
 
 [dependencies]
 walkdir = "2"
